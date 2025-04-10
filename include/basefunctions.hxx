@@ -14,6 +14,23 @@ enum Channel { MT = 0, ET = 1, TT = 2, EM = 3 };
 
 namespace basefunctions {
 
+// vh extension
+/// Require events with its quantity to be "?" to the threshold
+/// "?" can be set to any comparison ">", "<=", "==" etc.
+///
+/// \param df The input dataframe
+/// \param quantity The quantity to cut on
+/// \param threshold The threshold to cut with [int float double]
+/// \param filtername The name of the filter, used in the Dataframe report
+///
+/// \returns a filtered dataframe
+inline ROOT::RDF::RNode FilterThreshold(ROOT::RDF::RNode df,
+                                           const std::string &quantity,
+                                           const double threshold, const std::string relation,
+                                           const std::string &filtername) {
+    return df.Filter( quantity + " " + relation + " " + std::to_string(threshold), filtername);
+}
+
 /**
  * @brief Function to filter events based on their run and luminosity block
  * values
@@ -281,7 +298,12 @@ inline auto FilterMax(const float &cut) {
         return mask;
     };
 }
-
+inline auto FilterMaxUChar(const unsigned char &cut) {
+    return [cut](const ROOT::RVec<unsigned char> &values) {
+        ROOT::RVec<int> mask = values < cut;
+        return mask;
+    };
+}
 /// Function to apply a maximal filter requirement to an integer quantity.
 /// Returns true if the value is smaller than the given cut value
 ///
@@ -290,20 +312,6 @@ inline auto FilterMax(const float &cut) {
 /// \returns a lambda function to be used in RDF Define
 inline auto FilterMaxInt(const int &cut) {
     return [cut](const ROOT::RVec<int> &values) {
-        ROOT::RVec<int> mask = values < cut;
-        return mask;
-    };
-}
-
-/// Function to apply a maxmimal filter requirement to an integer quantity.
-/// Returns true if the value is larger than the given cut value
-/// This is only for NanoV11 as the working points are not stored as bit
-/// \param cut The cut value of the filter
-///
-/// \returns a lambda function to be used in RDF Define
-inline auto FilterMaxUChar_t(const UChar_t &cut) {
-    // As in ROOT, for min we use >=
-    return [cut](const ROOT::RVec<UChar_t> &values) {
         ROOT::RVec<int> mask = values < cut;
         return mask;
     };
@@ -349,21 +357,6 @@ inline auto FilterMinInt(const int &cut) {
         return mask;
     };
 }
-
-/// Function to apply a minimal filter requirement to an integer quantity.
-/// Returns true if the value is larger than the given cut value
-/// This is only for NanoV11 as the working points are not stored as bit
-/// \param cut The cut value of the filter
-///
-/// \returns a lambda function to be used in RDF Define
-inline auto FilterMinUChar_t(const UChar_t &cut) {
-    // As in ROOT, for min we use >=
-    return [cut](const ROOT::RVec<UChar_t> &values) {
-        ROOT::RVec<int> mask = values >= cut;
-        return mask;
-    };
-}
-
 
 /// Function to apply a minimal filter requirement to a quantity.
 /// Returns true if the absolute value is larger than the given cut value
@@ -424,20 +417,11 @@ inline auto FilterJetID(const int &index) {
         return mask;
     };
 }
-
-
-/// Function to filter the Jet ID in NanoAOD. The Jet ID has 3 possible values
-/// (for UL): 0==fail tight ID and fail tightLepVeto, 2==pass tight ID and fail
-/// tightLepVeto, 6==pass tight ID and pass tightLepVeto
-///
-/// \param index The bitmask index to be used for comparison
-///
-/// \returns a lambda function to be used in RDF Define
-inline auto FilterJetID_UChar_t(const UChar_t &index) {
+inline auto FilterJetUCharID(const unsigned char &index) {
     return [index](const ROOT::RVec<UChar_t> &IDs) {
         ROOT::RVec<int> mask = IDs >= index;
-        Logger::get("FilterJetID")->debug("IDs: {}", IDs);
-        Logger::get("FilterJetID")->debug("Filtered mask: {}", mask);
+        Logger::get("FilterJetUCharID")->debug("IDs: {}", IDs);
+        Logger::get("FilterJetUCharID")->debug("Filtered mask: {}", mask);
         return mask;
     };
 }

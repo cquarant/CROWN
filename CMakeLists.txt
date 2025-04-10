@@ -152,7 +152,7 @@ message(STATUS "Including spdlog.")
 include(ExternalProject)
 ExternalProject_Add(spdlog
     PREFIX          spdlog
-    GIT_REPOSITORY  git@github.com:gabime/spdlog.git # if spdlog prompts an error try  git@github.com/gabime/spdlog.git instead, 
+    GIT_REPOSITORY  https://github.com/gabime/spdlog.git # if spdlog prompts an error try  git@github.com/gabime/spdlog.git instead, 
     # or mannually down spdlog repo in your build
     GIT_SHALLOW     1
     GIT_TAG         v1.8.5

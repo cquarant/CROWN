@@ -11,12 +11,187 @@
 #include "ROOT/RVec.hxx"
 #include <Math/Vector4D.h>
 #include <Math/VectorUtil.h>
-#include <TLorentzVector.h>
-#include <TVector3.h>
+#include <iostream>
+#include <string>
+#include <type_traits>
+#include <vector>
+#include "TVector3.h"
+#include "TLorentzVector.h"
+#include "TLorentzRotation.h"
+#include <Math/Boost.h>
+// #include "../include/MT2/lester_mt2.hxx"
+
+
 /// The namespace that is used to hold the functions for basic quantities that
 /// are needed for every event
 namespace quantities {
+///mingxuan calc met MT2
+// ROOT::RDF::RNode calc_MT2(ROOT::RDF::RNode df, const std::string &outputname,
+//                         const std::string &mu1_p4, const std::string &mu2_p4, const std::string &met_p4) {
+//     auto calc_MT2 = [](ROOT::Math::PtEtaPhiMVector &mu1_p4,
+//                        ROOT::Math::PtEtaPhiMVector &mu2_p4,
+//                        ROOT::Math::PtEtaPhiMVector &met_p4) {
+//         float mVisA = mu1_p4.M();
+//         float pxA = mu1_p4.Px();
+//         float pyA = mu1_p4.Py();
 
+//         float mVisB = mu2_p4.M();
+//         float pxB = mu2_p4.Px();
+//         float pyB = mu2_p4.Py();
+
+//         float pxmiss = met_p4.Px();
+//         float pymiss = met_p4.Py();
+
+//         float chiA = 0;
+//         float chiB = 0;
+
+//         float desiredPrecisionOnMt2 = 0;
+
+//         asymm_mt2_lester_bisect::disableCopyrightMessage();
+
+//         float MT2 = asymm_mt2_lester_bisect::get_mT2(mVisA, pxA, pyA, mVisB, pxB, pyB, pxmiss, pymiss, chiA, chiB, desiredPrecisionOnMt2);
+//         if ( !std::isnan(MT2) && !std::isinf(MT2) ) {
+//             return MT2;
+//         } else {
+//             return -10.0f;
+//         }
+//     };
+//     return df.Define(outputname, calc_MT2, {mu1_p4, mu2_p4, met_p4});
+// }
+///mingxuan calc met Mct
+ROOT::RDF::RNode calc_Mct(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &mu1_p4, const std::string &mu2_p4) {
+    auto calc_met_Mct = [](ROOT::Math::PtEtaPhiMVector &mu1_p4,
+                           ROOT::Math::PtEtaPhiMVector &mu2_p4) {
+        float px1, px2, py1, py2, Et1, Et2;
+        float Mct;
+        px1 = mu1_p4.Px(), px2 = mu2_p4.Px(), py1 = mu1_p4.Py(), py2 = mu2_p4.Py();
+        float muon_mass = 0.1056583755;
+        Et1 = sqrt(px1*px1 + py1*py1 + muon_mass*muon_mass);
+        Et2 = sqrt(px2*px2 + py2*py2 + muon_mass*muon_mass);
+        Mct = sqrt((Et1+Et1)*(Et1+Et1) - ((px1-px2)*(px1-px2) + (py1-py2)*(py1-py2)));
+
+        if ( !std::isnan(Mct) && !std::isinf(Mct) ) {
+            return Mct;
+        } else {
+            return -10.0f;
+        }
+    };
+    return df.Define(outputname, calc_met_Mct, {mu1_p4, mu2_p4});
+}
+///mingxuan add A/B
+ROOT::RDF::RNode calc_ratio(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &A, const std::string &B) {
+    auto calculate_ratio = [](float A, float B) {
+        if( B==0 ){
+            return -10.0f;
+        }else{
+            return A/B;
+        }
+    };
+    return df.Define(outputname, calculate_ratio, {A,B});
+}
+/// function to calculate the pz_nu
+ROOT::RDF::RNode calculateNeutrinoPz(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &lep_p4, const std::string &met_p4) {
+    auto calc_pz_nu = [](ROOT::Math::PtEtaPhiMVector &lep_p4,
+                               ROOT::Math::PtEtaPhiMVector &met_p4) {
+        const float mW = 80.379;
+        float nu_px = met_p4.pt() * cos(met_p4.phi());
+        float nu_py = met_p4.pt() * sin(met_p4.phi());
+        //
+        float a = (mW * mW) / 2 + lep_p4.Px() * nu_px + lep_p4.Py() * nu_py;
+        float A = lep_p4.E() * lep_p4.E() - lep_p4.Pz() * lep_p4.Pz();
+        float B = -2 * a * lep_p4.Pz();
+        float C = lep_p4.E() * lep_p4.E() * (nu_px * nu_px + nu_py * nu_py) - a * a;
+        // 
+        float discriminant = B * B - 4 * A * C;
+        float neutrino_pz1 = 0, neutrino_pz2 = 0;
+        // 
+        if (discriminant < 0) {
+            // Complex solution: take real part
+            neutrino_pz1 = -B / (2 * A);
+            neutrino_pz2 = neutrino_pz1; // Identical since discriminant = 0
+        } else {
+            // Real solutions
+            neutrino_pz1 = (-B + sqrt(discriminant)) / (2 * A);
+            neutrino_pz2 = (-B - sqrt(discriminant)) / (2 * A);
+        }
+        if (abs(neutrino_pz1) < abs(neutrino_pz2)) {
+            return neutrino_pz1;
+        } else {
+            return neutrino_pz2;
+        }
+
+    };
+    return df.Define(outputname, calc_pz_nu, {lep_p4, met_p4});
+}
+///
+/// function to pick dimuon pair from Higgs
+///
+///
+ROOT::RDF::RNode calculate_kT(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &p1, const std::string &p2) {
+    auto calculate_kT = [](ROOT::Math::PtEtaPhiMVector &p1,
+                               ROOT::Math::PtEtaPhiMVector &p2) {
+        if (p1.pt() < 0.0 || p2.pt() < 0.0)
+            return default_float;          
+    float pt_1 = p1.pt();
+    float pt_2 = p2.pt();
+    float result =std::min(pt_1, pt_2) * ROOT::Math::VectorUtil::DeltaR(p1, p2);
+    if ( !std::isnan(result) && !std::isinf(result) ) {
+        return result;
+    } else {
+        return -10.0f;
+    }
+    };
+    return df.Define(outputname, calculate_kT, {p1, p2});
+}
+ROOT::RDF::RNode calculate_antikT(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &p1, const std::string &p2) {
+    auto calculate_antikT = [](ROOT::Math::PtEtaPhiMVector &p1,
+                               ROOT::Math::PtEtaPhiMVector &p2) {
+        if (p1.pt() < 0.0 || p2.pt() < 0.0)
+            return default_float;          
+    float pt_1 = p1.pt();
+    float pt_2 = p2.pt();
+    float result =std::min(1/pt_1, 1/pt_2) * ROOT::Math::VectorUtil::DeltaR(p1, p2);
+    if ( !std::isnan(result) && !std::isinf(result) ) {
+        return result;
+    } else {
+        return -10.0f;
+    }
+    };
+    return df.Define(outputname, calculate_antikT, {p1, p2});
+}
+
+///
+/// funciton to calc mT contains MHT
+ROOT::RDF::RNode mT_MHT(ROOT::RDF::RNode df, const std::string &outputname,
+                    const std::string &particle_p4, const std::string &met) {
+    auto calculate_mt = [](ROOT::Math::PtEtaPhiMVector &particle_p4,
+                           ROOT::Math::PtEtaPhiMVector &met) {
+        float mt = (float)sqrt(2 * fabs(particle_p4.Pt()) * fabs(met.Pt()) *
+                       (1. - cos(particle_p4.Phi() - met.Phi())));
+        if ( !std::isnan(mt) && !std::isinf(mt) ) {
+            return mt;
+        } else {
+            return default_float;
+        }
+    };
+    return df.Define(outputname, calculate_mt, {particle_p4, met});
+}
+///
+//// function to calc the delta Eta
+ROOT::RDF::RNode deltaEta(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &p_1_p4, const std::string &p_2_p4) {
+    auto calculate_deltaEta = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
+                               ROOT::Math::PtEtaPhiMVector &p_2_p4) {
+        return (float)fabs(p_1_p4.eta() - p_2_p4.eta());
+    };
+    return df.Define(outputname, calculate_deltaEta, {p_1_p4, p_2_p4});
+}
+///
 /// Function to calculate the pt from a given lorentz vector and add it to the
 /// dataframe
 ///
@@ -150,48 +325,51 @@ ROOT::RDF::RNode charge(ROOT::RDF::RNode df, const std::string &outputname,
         outputname,
         [position](const ROOT::RVec<int> &pair, const ROOT::RVec<int> &charge) {
             const int index = pair.at(position);
-            return (int)charge.at(index, default_int);
+            return charge.at(index, default_int);
         },
         {pairname, chargecolumn});
 }
-
-ROOT::RDF::RNode charge_short(ROOT::RDF::RNode df, const std::string &outputname,
-                        const int &position, const std::string &pairname,
-                        const std::string &chargecolumn) {
-    return df.Define(
-        outputname,
-        [position](const ROOT::RVec<int> &pair, const ROOT::RVec<Short_t> &charge) {
-            const int index = pair.at(position);
-            return (Short_t)charge.at(index, default_short);
-        },
-        {pairname, chargecolumn});
-}
-/// Function to calculate the scalar sum of pts for given lorentz vectors and
-/// add it to the dataframe
+/// Function to calculate the scalar sum of pts for given lorentz vectors and add it to the
+/// dataframe
 ///
 /// \param df the dataframe to add the quantity to
 /// \param outputname name of the new column containing the pt value
-/// \param pt_1 name of the column containing the first lorentz vector
-/// \param pt_2 name of the column containing the second lorentz vector
-/// \param pt_3 name of the column containing the third lorentz vector
+/// \param inputvector name of the column containing the lorentz vector
+///
 /// \returns a dataframe with the new column
 
 ROOT::RDF::RNode scalarPtSum(ROOT::RDF::RNode df, const std::string &outputname,
-                             const std::string &pt_1, const std::string &pt_2,
-                             const std::string &pt_3) {
+                       const std::string &pt_1, const std::string &pt_2, const std::string &pt_3) {
     // build scalar sum of pts of 3 objects
     return df.Define(
         outputname,
-        [](const float &pt_1, const float &pt_2, const float &pt_3) {
-            if (pt_1 < 0.0 || pt_2 < 0.0 || pt_3 < 0.0)
+        [](const float &pt_1,
+           const float &pt_2, const float &pt_3) {
+            if (pt_3 < 0.0 || pt_3 < 0.0 || pt_3 < 0.0)
                 return default_float;
             auto const triple_lepton_pt = pt_1 + pt_2 + pt_3;
             return (float)triple_lepton_pt;
         },
         {pt_1, pt_2, pt_3});
 }
+
+ROOT::RDF::RNode scalarPtSum_met(ROOT::RDF::RNode df, const std::string &outputname,
+                       const std::string &pt_1, const std::string &pt_2, const std::string &pt_3 ,const std::string &pt_4 ) {
+    // build scalar sum of pts of 3 objects
+    return df.Define(
+        outputname,
+        [](const float &pt_1,
+           const float &pt_2, const float &pt_3 , const float &pt_4) {
+            if (pt_3 < 0.0 || pt_3 < 0.0 || pt_3 < 0.0 || pt_4 < 0.0)
+                return default_float;
+            auto const triple_lepton_pt_met = pt_1 + pt_2 + pt_3 + pt_4 ;
+            return (float)triple_lepton_pt_met;
+        },
+        {pt_1, pt_2, pt_3, pt_4});
+}
+
 /**
- * @brief function used to calculate the deltaPhi between two lorentz vectors.
+ * @brief function used to calculate the deltaPhi between two lorentz vectors. $\phi_1$ is from the first lorentz vector and $\phi_2$ is from the second lorentz vector.
  *
  * @param df name of the dataframe
  * @param outputname name of the new column containing the deltaR value
@@ -200,17 +378,15 @@ ROOT::RDF::RNode scalarPtSum(ROOT::RDF::RNode df, const std::string &outputname,
  * @return a new dataframe with the new column
  */
 ROOT::RDF::RNode deltaPhi(ROOT::RDF::RNode df, const std::string &outputname,
-                          const std::string &p_1_p4,
-                          const std::string &p_2_p4) {
+                        const std::string &p_1_p4, const std::string &p_2_p4) {
     auto calculate_deltaPhi = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
-                                 ROOT::Math::PtEtaPhiMVector &p_2_p4) {
-        return ROOT::Math::VectorUtil::DeltaPhi(p_1_p4, p_2_p4);
+                               ROOT::Math::PtEtaPhiMVector &p_2_p4) {
+        return abs(ROOT::Math::VectorUtil::DeltaPhi(p_1_p4, p_2_p4));
     };
     return df.Define(outputname, calculate_deltaPhi, {p_1_p4, p_2_p4});
 }
 /**
- * @brief function used to calculate the deltaPhi between the lepton from a W
- * and the visible Higgs decay products.
+ * @brief function used to calculate the deltaPhi between the lepton from a W and the visible Higgs decay products. $\phi_1$ is from the first lorentz vector and $\phi_2$ is from the second lorentz vector and \phi_3$ is from the third lorentz vector.
  *
  * @param df name of the dataframe
  * @param outputname name of the new column containing the deltaR value
@@ -220,12 +396,9 @@ ROOT::RDF::RNode deltaPhi(ROOT::RDF::RNode df, const std::string &outputname,
  * @return a new dataframe with the new column
  */
 ROOT::RDF::RNode deltaPhi_WH(ROOT::RDF::RNode df, const std::string &outputname,
-                             const std::string &p_1_p4,
-                             const std::string &p_2_p4,
-                             const std::string &p_3_p4) {
+                        const std::string &p_1_p4, const std::string &p_2_p4, const std::string &p_3_p4) {
     auto calculate_deltaPhi = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
-                                 ROOT::Math::PtEtaPhiMVector &p_2_p4,
-                                 ROOT::Math::PtEtaPhiMVector &p_3_p4) {
+                               ROOT::Math::PtEtaPhiMVector &p_2_p4, ROOT::Math::PtEtaPhiMVector &p_3_p4) {
         auto const dileptonsystem = p_2_p4 + p_3_p4;
         return ROOT::Math::VectorUtil::DeltaPhi(p_1_p4, dileptonsystem);
     };
@@ -287,82 +460,76 @@ ROOT::RDF::RNode m_vis(ROOT::RDF::RNode df, const std::string &outputname,
  * "et", "tt", "em"
  * @return ROOT::RDF::RNode
  */
-ROOT::RDF::RNode
-p4_fastmtt(ROOT::RDF::RNode df, const std::string &outputname,
-           const std::string &pt_1, const std::string &pt_2,
-           const std::string &eta_1, const std::string &eta_2,
-           const std::string &phi_1, const std::string &phi_2,
-           const std::string &mass_1, const std::string &mass_2,
-           const std::string &met_pt, const std::string &met_phi,
-           const std::string &met_cov_xx, const std::string &met_cov_xy,
-           const std::string &met_cov_yy, const std::string &decay_mode_1,
-           const std::string &decay_mode_2, const std::string &finalstate) {
-    // initialize the FastMTT algorithm
-    auto calculate_fast_mtt =
-        [finalstate](const float &pt_1, const float &pt_2, const float &eta_1,
-                     const float &eta_2, const float &phi_1, const float &phi_2,
-                     const float &mass_1, const float &mass_2,
-                     const float &met_pt, const float &met_phi,
-                     const float &met_cov_xx, const float &met_cov_xy,
-                     const float &met_cov_yy, const UChar_t &decay_mode_1,
-                     const UChar_t &decay_mode_2) {
-            
-            // if pt is negative result is unphysical
-            if (pt_1 < 0.0 || pt_2 < 0.0) return default_lorentzvector;
-            
-            std::vector<fastmtt::MeasuredTauLepton> measuredTauLeptons;
-            TMatrixD covMET(2, 2);
-            covMET[0][0] = met_cov_xx;
-            covMET[1][0] = met_cov_xy;
-            covMET[0][1] = met_cov_xy;
-            covMET[1][1] = met_cov_yy;
-            // build the met lorentz vector
-            ROOT::Math::PtEtaPhiMVector met(met_pt, 0.0, met_phi, 0.0);
-            // set the decay modes according to the final state
-            auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
-            auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
-            UChar_t dm_1, dm_2;
-            if (finalstate == "mt") {
-                dm_1 = -1;
-                dm_2 = decay_mode_2;
-                auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToMuDecay;
-                auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
-            } else if (finalstate == "et") {
-                dm_1 = -1;
-                dm_2 = decay_mode_2;
-                auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToElecDecay;
-                auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
-            } else if (finalstate == "tt") {
-                dm_1 = decay_mode_1;
-                dm_2 = decay_mode_2;
-            } else if (finalstate == "em") {
-                dm_1 = -1;
-                dm_2 = -1;
-                auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToElecDecay;
-                auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToMuDecay;
-            } else {
-                Logger::get("FastMTT")->error(
-                    "Final state {} not supported by FastMTT", finalstate);
-                return (ROOT::Math::PtEtaPhiMVector)LorentzVector();
-            }
-            Logger::get("FastMTT")->debug("FastMTT result:decay_obj_1, pt_1, eta_1, phi_1, mass_1, dm_1: {}, {}, {}, {},{},{}", decay_obj_1, pt_1, eta_1, phi_1, mass_1, dm_1);
-            measuredTauLeptons.push_back(fastmtt::MeasuredTauLepton(
-                decay_obj_1, pt_1, eta_1, phi_1, mass_1, dm_1));
-            measuredTauLeptons.push_back(fastmtt::MeasuredTauLepton(
-                decay_obj_2, pt_2, eta_2, phi_2, mass_2, dm_2));
-            FastMTT FastMTTAlgo;
-            ROOT::Math::PtEtaPhiMVector result =
-                FastMTTAlgo.run(measuredTauLeptons, met.X(), met.Y(), covMET);
-            // ROOT::Math::PtEtaPhiMVector result(_result.Pt(), _result.Eta(),
-            //                                    _result.Phi(), _result.M());
-            Logger::get("FastMTT")->debug("FastMTT result: {}", result.M());
-            return result;
-        };
-    return df.Define(outputname, calculate_fast_mtt,
-                     {pt_1, pt_2, eta_1, eta_2, phi_1, phi_2, mass_1, mass_2,
-                      met_pt, met_phi, met_cov_xx, met_cov_xy, met_cov_yy,
-                      decay_mode_1, decay_mode_2});
-}
+// ROOT::RDF::RNode
+// p4_fastmtt(ROOT::RDF::RNode df, const std::string &outputname,
+//            const std::string &pt_1, const std::string &pt_2,
+//            const std::string &eta_1, const std::string &eta_2,
+//            const std::string &phi_1, const std::string &phi_2,
+//            const std::string &mass_1, const std::string &mass_2,
+//            const std::string &met_pt, const std::string &met_phi,
+//            const std::string &met_cov_xx, const std::string &met_cov_xy,
+//            const std::string &met_cov_yy, const std::string &decay_mode_1,
+//            const std::string &decay_mode_2, const std::string &finalstate) {
+//     auto calculate_fast_mtt =
+//         [finalstate](const float &pt_1, const float &pt_2, const float &eta_1,
+//                      const float &eta_2, const float &phi_1, const float &phi_2,
+//                      const float &mass_1, const float &mass_2,
+//                      const float &met_pt, const float &met_phi,
+//                      const float &met_cov_xx, const float &met_cov_xy,
+//                      const float &met_cov_yy, const int &decay_mode_1,
+//                      const int &decay_mode_2) {
+//             std::vector<fastmtt::MeasuredTauLepton> measuredTauLeptons;
+//             TMatrixD covMET(2, 2);
+//             covMET[0][0] = met_cov_xx;
+//             covMET[1][0] = met_cov_xy;
+//             covMET[0][1] = met_cov_xy;
+//             covMET[1][1] = met_cov_yy;
+//             // build the met lorentz vector
+//             ROOT::Math::PtEtaPhiMVector met(met_pt, 0.0, met_phi, 0.0);
+//             // set the decay modes according to the final state
+//             auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
+//             auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
+//             int dm_1, dm_2;
+//             if (finalstate == "mt") {
+//                 dm_1 = -1;
+//                 dm_2 = decay_mode_2;
+//                 auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToMuDecay;
+//                 auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
+//             } else if (finalstate == "et") {
+//                 dm_1 = -1;
+//                 dm_2 = decay_mode_2;
+//                 auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToElecDecay;
+//                 auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToHadDecay;
+//             } else if (finalstate == "tt") {
+//                 dm_1 = decay_mode_1;
+//                 dm_2 = decay_mode_2;
+//             } else if (finalstate == "em") {
+//                 dm_1 = -1;
+//                 dm_2 = -1;
+//                 auto decay_obj_1 = fastmtt::MeasuredTauLepton::kTauToElecDecay;
+//                 auto decay_obj_2 = fastmtt::MeasuredTauLepton::kTauToMuDecay;
+//             } else {
+//                 Logger::get("FastMTT")->error(
+//                     "Final state {} not supported by FastMTT", finalstate);
+//                 return (ROOT::Math::PtEtaPhiMVector)LorentzVector();
+//             }
+//             measuredTauLeptons.push_back(fastmtt::MeasuredTauLepton(
+//                 decay_obj_1, pt_1, eta_1, phi_1, mass_1, dm_1));
+//             measuredTauLeptons.push_back(fastmtt::MeasuredTauLepton(
+//                 decay_obj_2, pt_2, eta_2, phi_2, mass_2, dm_2));
+//             FastMTT FastMTTAlgo;
+//             FastMTTAlgo.run(measuredTauLeptons, met.X(), met.Y(), covMET);
+//             LorentzVector result = FastMTTAlgo.getBestP4();
+//             // ROOT::Math::PtEtaPhiMVector result(_result.Pt(), _result.Eta(),
+//             //                                    _result.Phi(), _result.M());
+//             Logger::get("FastMTT")->debug("FastMTT result: {}", result.M());
+//             return (ROOT::Math::PtEtaPhiMVector)result;
+//         };
+//     return df.Define(outputname, calculate_fast_mtt,
+//                      {pt_1, pt_2, eta_1, eta_2, phi_1, phi_2, mass_1, mass_2,
+//                       met_pt, met_phi, met_cov_xx, met_cov_xy, met_cov_yy,
+//                       decay_mode_1, decay_mode_2});
+// }
 /// Function to calculate the visible pt from a pair of lorentz vectors and
 /// add it to the dataframe. The visible pt is calculated as the pt of the
 /// lorentz vector of the dilepton system.
@@ -388,8 +555,7 @@ ROOT::RDF::RNode pt_vis(ROOT::RDF::RNode df, const std::string &outputname,
         },
         inputvectors);
 }
-/// Function to calculate the pt of the W from a the visible lepton fourvector,
-/// the met four vector and the neutrino four vector from the Higgs system and
+/// Function to calculate the pt of the W from a the visible lepton fourvector, the met four vector and the neutrino four vector from the Higgs system and
 /// add it to the dataframe.
 ///
 /// \param df the dataframe to add the quantity to
@@ -400,7 +566,7 @@ ROOT::RDF::RNode pt_vis(ROOT::RDF::RNode df, const std::string &outputname,
 /// \returns a dataframe with the new column
 
 ROOT::RDF::RNode pt_W(ROOT::RDF::RNode df, const std::string &outputname,
-                      const std::vector<std::string> &inputvectors) {
+                        const std::vector<std::string> &inputvectors) {
     // build visible pt from the two particles
     return df.Define(
         outputname,
@@ -487,8 +653,6 @@ ROOT::RDF::RNode mTdileptonMET(ROOT::RDF::RNode df,
     auto calculate_mTdileptonMET = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
                                       ROOT::Math::PtEtaPhiMVector &p_2_p4,
                                       ROOT::Math::PtEtaPhiMVector &met) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 || met.pt() < 0.0)
-            return default_float;                              
         ROOT::Math::PtEtaPhiMVector dilepton = p_1_p4 + p_2_p4;
         return vectoroperations::calculateMT(dilepton, met);
     };
@@ -498,9 +662,8 @@ ROOT::RDF::RNode mTdileptonMET(ROOT::RDF::RNode df,
 
 /**
  * @brief function used to calculate the deltaR between two lorentz vectors. It
- is defined as
- $\f[ \Delta R = \sqrt{(\eta_1 - \eta_2)^2 + (\phi_1 - \phi_2)^2} \f$
- where $\eta_1$ and $\phi_1$ are from the first lorentz vector and $\eta_2$
+ is defined as \f[ \Delta R = \sqrt{(\eta_1 - \eta_2)^2 + (\phi_1 - \phi_2)^2}
+ \f$ where $\eta_1$ and $\phi_1$ are from the first lorentz vector and $\eta_2$
  and $\phi_2$ are from the second lorentz vector.
  *
  * @param df name of the dataframe
@@ -513,8 +676,6 @@ ROOT::RDF::RNode deltaR(ROOT::RDF::RNode df, const std::string &outputname,
                         const std::string &p_1_p4, const std::string &p_2_p4) {
     auto calculate_deltaR = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
                                ROOT::Math::PtEtaPhiMVector &p_2_p4) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0)
-            return default_float;
         return (float)ROOT::Math::VectorUtil::DeltaR(p_1_p4, p_2_p4);
     };
     return df.Define(outputname, calculate_deltaR, {p_1_p4, p_2_p4});
@@ -535,8 +696,6 @@ ROOT::RDF::RNode mT(ROOT::RDF::RNode df, const std::string &outputname,
                     const std::string &particle_p4, const std::string &met) {
     auto calculate_mt = [](ROOT::Math::PtEtaPhiMVector &particle_p4,
                            ROOT::Math::PtEtaPhiMVector &met) {
-        if (particle_p4.pt() < 0.0  || met.pt() < -9.9)
-            return default_float;      
         return vectoroperations::calculateMT(particle_p4, met);
     };
     return df.Define(outputname, calculate_mt, {particle_p4, met});
@@ -559,52 +718,12 @@ ROOT::RDF::RNode pt_tt(ROOT::RDF::RNode df, const std::string &outputname,
     auto calculate_pt_tt = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
                               ROOT::Math::PtEtaPhiMVector &p_2_p4,
                               ROOT::Math::PtEtaPhiMVector &met) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 || met.pt() < 0.0)
-            return default_float;          
         auto dileptonmet = p_1_p4 + p_2_p4 + met;
         return (float)dileptonmet.Pt();
     };
     return df.Define(outputname, calculate_pt_tt, {p_1_p4, p_2_p4, met});
 }
 
-ROOT::RDF::RNode mass_tt(ROOT::RDF::RNode df, const std::string &outputname,
-                       const std::string &p_1_p4, const std::string &p_2_p4,
-                       const std::string &met) {
-    auto calculate_mass_tt = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
-                              ROOT::Math::PtEtaPhiMVector &p_2_p4,
-                              ROOT::Math::PtEtaPhiMVector &met) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 || met.pt() < 0.0)
-            return default_float;          
-        auto dileptonmet = p_1_p4 + p_2_p4 + met;
-        return (float)dileptonmet.mass();
-    };
-    return df.Define(outputname, calculate_mass_tt, {p_1_p4, p_2_p4, met});
-}
-
-
-ROOT::RDF::RNode pt_ll(ROOT::RDF::RNode df, const std::string &outputname,
-                       const std::string &p_1_p4, const std::string &p_2_p4) {
-    auto calculate_pt_ll = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
-                              ROOT::Math::PtEtaPhiMVector &p_2_p4) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 )
-            return default_float;          
-        auto dileptonmet = p_1_p4 + p_2_p4;
-        return (float)dileptonmet.Pt();
-    };
-    return df.Define(outputname, calculate_pt_ll, {p_1_p4, p_2_p4});
-}
-
-ROOT::RDF::RNode mass_ll(ROOT::RDF::RNode df, const std::string &outputname,
-                       const std::string &p_1_p4, const std::string &p_2_p4) {
-    auto calculate_mass_ll = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
-                              ROOT::Math::PtEtaPhiMVector &p_2_p4) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 )
-            return default_float;          
-        auto dileptonmet = p_1_p4 + p_2_p4;
-        return (float)dileptonmet.mass();
-    };
-    return df.Define(outputname, calculate_mass_ll, {p_1_p4, p_2_p4});
-}
 /**
  * @brief function used to calculate the pt of the dilepton + two leading jets +
  * met system. If the number of jets is less than 2, the quantity is set to 10
@@ -629,8 +748,6 @@ ROOT::RDF::RNode pt_ttjj(ROOT::RDF::RNode df, const std::string &outputname,
                                 ROOT::Math::PtEtaPhiMVector &jet_1_p4,
                                 ROOT::Math::PtEtaPhiMVector &jet_2_p4,
                                 ROOT::Math::PtEtaPhiMVector &met) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 || met.pt() < 0.0)
-            return default_float;          
         if (jet_1_p4.pt() < 0.0 || jet_2_p4.pt() < 0.0)
             return default_float;
         auto jetlepmet = p_1_p4 + p_2_p4 + met + jet_1_p4 + jet_2_p4;
@@ -642,7 +759,7 @@ ROOT::RDF::RNode pt_ttjj(ROOT::RDF::RNode df, const std::string &outputname,
 
 /**
  * @brief function used to calculate the pt two leading jets
- If the number of jets is less than 2, the quantity is set to -10
+ If the number of jets is less than 2, the quantity is set to 10
  * instead.
  *
  * @param df name of the dataframe
@@ -714,8 +831,6 @@ ROOT::RDF::RNode mt_tot(ROOT::RDF::RNode df, const std::string &outputname,
     auto calculate_mt_tot = [](ROOT::Math::PtEtaPhiMVector &p_1_p4,
                                ROOT::Math::PtEtaPhiMVector &p_2_p4,
                                ROOT::Math::PtEtaPhiMVector &met) {
-        if (p_1_p4.pt() < 0.0 || p_2_p4.pt() < 0.0 || met.pt() < 0.0)
-            return default_float;          
         const float mt_1 = vectoroperations::calculateMT(p_1_p4, met);
         const float mt_2 = vectoroperations::calculateMT(p_2_p4, met);
         const float mt_mix = vectoroperations::calculateMT(p_1_p4, p_2_p4);
@@ -769,6 +884,26 @@ ROOT::RDF::RNode pdgid(ROOT::RDF::RNode df, const std::string &outputname,
         },
         {pairname, pdgidcolumn});
 }
+
+// vhmm extend to number of objects, not only leptons
+/// Function to determine number of good objects
+///
+/// \param[in] df the input dataframe
+/// \param[out] outputname the name of the produced quantity
+/// \param[in] goodleptons name of the vector that contains a lepton mask of
+/// good leptons, its length of non-zero values constitutes the output quantity
+///
+/// \return a dataframe containing the number of good leptons in an event
+ROOT::RDF::RNode NumberOfGoodObjects(ROOT::RDF::RNode df,
+                                     const std::string &outputname,
+                                     const std::string &goodmask) {
+    return df.Define(outputname,
+                     [](const ROOT::RVec<int> &goodmask) {
+                         return (int)ROOT::VecOps::Nonzero(goodmask).size();
+                     },
+                     {goodmask});
+}
+
 /// Function to determine number of good leptons
 ///
 /// \param[in] df the input dataframe
@@ -805,9 +940,9 @@ ROOT::RDF::RNode decaymode(ROOT::RDF::RNode df, const std::string &outputname,
                            const std::string &decaymodecolumn) {
     return df.Define(outputname,
                      [position](const ROOT::RVec<int> &pair,
-                                const ROOT::RVec<UChar_t> &decaymode) {
+                                const ROOT::RVec<int> &decaymode) {
                          const int index = pair.at(position);
-                         return (UChar_t) decaymode.at(index, default_uchar);
+                         return decaymode.at(index, default_int);
                      },
                      {pairname, decaymodecolumn});
 }
@@ -861,10 +996,10 @@ ROOT::RDF::RNode matching_jet_pt(ROOT::RDF::RNode df,
                                  const std::string &jetpt_column) {
     return df.Define(outputname,
                      [position](const ROOT::RVec<int> &pair,
-                                const ROOT::RVec<Short_t> &taujets,
+                                const ROOT::RVec<int> &taujets,
                                 const ROOT::RVec<float> &jetpt) {
                          const int tauindex = pair.at(position);
-                         const Short_t jetindex = taujets.at(tauindex, -1);
+                         const int jetindex = taujets.at(tauindex, -1);
                          return jetpt.at(jetindex, default_float);
                      },
                      {pairname, taujet_index, jetpt_column});
@@ -890,12 +1025,12 @@ ROOT::RDF::RNode matching_genjet_pt(
     const std::string &genjet_index, const std::string &genjetpt_column) {
     return df.Define(outputname,
                      [position](const ROOT::RVec<int> &pair,
-                                const ROOT::RVec<Short_t> &taujets,
-                                const ROOT::RVec<Short_t> &genjets,
+                                const ROOT::RVec<int> &taujets,
+                                const ROOT::RVec<int> &genjets,
                                 const ROOT::RVec<float> &genjetpt) {
                          const int tauindex = pair.at(position);
-                         const Short_t jetindex = taujets.at(tauindex, -1);
-                         const Short_t genjetindex = genjets.at(jetindex, -1);
+                         const int jetindex = taujets.at(tauindex, -1);
+                         const int genjetindex = genjets.at(jetindex, -1);
                          return genjetpt.at(genjetindex, default_float);
                      },
                      {pairname, taujet_index, genjet_index, genjetpt_column});
@@ -914,26 +1049,24 @@ ROOT::RDF::RNode matching_genjet_pt(
 
 ROOT::RDF::RNode TauIDFlag(ROOT::RDF::RNode df, const std::string &outputname,
                            const int &position, const std::string &pairname,
-                           const std::string &nameID, const UChar_t &idxID) {
+                           const std::string &nameID, const int &idxID) {
     return df.Define(
         outputname,
         [position, idxID](const ROOT::RVec<int> &pair,
                           const ROOT::RVec<UChar_t> &IDs) {
-            const int index = pair.at(position);
-            const int ID = IDs.at(index, default_int);
             Logger::get("tauIDFlag")
                 ->debug(
-                    "position tau in pair {}, pair {}, id bit {}, vsjet ids {}, returning {}", 
-                    position, pair, idxID, ID, int(ID >= idxID));
+                    "position tau in pair {}, pair {}, id bit {}, vsjet ids {}",
+                    position, pair, idxID, IDs);
+            const int index = pair.at(position);
+            const int ID = IDs.at(index, default_int);
             if (ID != default_int)
-                // return std::min(1, int(ID & 1 << (idxID - 1)));
-                return int(ID >= idxID); // in Nano V11 the working points are no long saved as bit
+                return std::min(1, int(ID & 1 << (idxID - 1)));
             else
                 return int(ID);
         },
         {pairname, nameID});
 }
-
 } // end namespace tau
 /// namespace for muon specific quantities
 namespace muon {
@@ -986,14 +1119,15 @@ ROOT::RDF::RNode is_global(ROOT::RDF::RNode df, const std::string &outputname,
  * @param outputname the name of the new quantity
  * @param position position of the muon in the pair vector
  * @param pairname name of the column containing the pair vector
- * @param trackerflagcolumn name of the column containing the muon is global
- * flag
+ * @param trackerflagcolumn name of the column containing the muon is global flag
  * @return a dataframe with the new column
  */
 ROOT::RDF::RNode is_tracker(ROOT::RDF::RNode df, const std::string &outputname,
-                            const int &position, const std::string &pairname,
-                            const std::string &trackerflagcolumn) {
-    Logger::get("muonIsTrackerflag")->debug("is tracker pos {}", position);
+                           const int &position, const std::string &pairname,
+                           const std::string &trackerflagcolumn) {
+    Logger::get("muonIsTrackerflag")
+                ->debug(
+                    "is tracker pos {}", position);
     return df.Define(outputname,
                      [position](const ROOT::RVec<int> &pair,
                                 const ROOT::RVec<bool> &trackerflag) {
@@ -1017,7 +1151,9 @@ namespace electron {
 ROOT::RDF::RNode id(ROOT::RDF::RNode df, const std::string &outputname,
                     const int &position, const std::string &pairname,
                     const std::string &idcolumn) {
-    Logger::get("electronIDflag")->debug("ele ID position {}", position);
+    Logger::get("electronIDflag")
+                ->debug(
+                    "ele ID position {}", position);
     return df.Define(
         outputname,
         [position](const ROOT::RVec<int> &pair, const ROOT::RVec<bool> &id) {
@@ -1028,267 +1164,196 @@ ROOT::RDF::RNode id(ROOT::RDF::RNode df, const std::string &outputname,
 }
 } // end namespace electron
 
+namespace boostedbbtt{
+    ROOT::RDF::RNode dR_tau_fatjet0(
+        ROOT::RDF::RNode df, 
+        const std::string &dR_tau_fatjet,
+        const std::string &p0_fatjet, 
+        const std::string &taupt, 
+        const std::string &taueta, 
+        const std::string &tauphi,
+        const std::string &taumass
+    ) {
+        auto df1 = df.Define(
+            dR_tau_fatjet,
+            [](
+                const ROOT::Math::PtEtaPhiMVector &p0,
+                const ROOT::RVec<float> &pt, 
+                const ROOT::RVec<float> &eta, 
+                const ROOT::RVec<float> &phi, 
+                const ROOT::RVec<float> &mass 
+            ) {
+                ROOT::RVec<float> deltaRs;
 
-ROOT::RDF::RNode calculate_costheta(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &TauTau_p4) {
-    auto calculate_costheta = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &TauTau_p4) {
-        if (tau_1.pt() < 0.0 || TauTau_p4.pt() < 0.0)
-            return default_float;          
-        TLorentzVector tau_1_TL;
-        TLorentzVector tautau_TL;
-        tau_1_TL.SetPtEtaPhiM(tau_1.Pt(), tau_1.Eta(), tau_1.Phi(), tau_1.M());
-        tautau_TL.SetPtEtaPhiM(TauTau_p4.Pt(), TauTau_p4.Eta(), TauTau_p4.Phi(), TauTau_p4.M());
+                for (size_t i = 0; i < pt.size(); ++i) {
+                    ROOT::Math::PtEtaPhiMVector p4(pt[i], eta[i], phi[i], mass[i]);
+                    float deltaR_value = (float)ROOT::Math::VectorUtil::DeltaR(p0, p4);
+                    deltaRs.push_back(deltaR_value);
+                    }
+                    return deltaRs;
+                },
+                {p0_fatjet ,taupt, taueta, tauphi, taumass}
+        );
 
-        // tautau_TL is equivalent to Higgs/Z 
-        TVector3 tautau_v = tautau_TL.Vect();
-        TVector3 tautauboost = -(tautau_TL.BoostVector());
-        tau_1_TL.Boost(tautauboost);
-        TVector3 tau_1_v = tau_1_TL.Vect();
-        // Calculate cos(theta) in the rest frame of the parent particle
-        float costheta = tau_1_v.CosTheta(); // cos(theta) = pz / |p|
-        if ( !std::isnan(costheta) && !std::isinf(costheta) ) {
-            return costheta;
-        } else {
-            return -10.0f;
-        }
-    };
-    return df.Define(outputname, calculate_costheta, {tau_1, TauTau_p4});
-}
-ROOT::RDF::RNode calculate_costhstar(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &TauTau_p4) {
-    auto calculate_costhstar = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &TauTau_p4) {
-        if (tau_1.pt() < 0.0 || TauTau_p4.pt() < 0.0)
-            return default_float;          
-    TLorentzVector tau_1_TL;
-    TLorentzVector tautau_TL;
-    tau_1_TL.SetPtEtaPhiM(tau_1.Pt(), tau_1.Eta(), tau_1.Phi(), tau_1.M());
-    tautau_TL.SetPtEtaPhiM(TauTau_p4.Pt(), TauTau_p4.Eta(), TauTau_p4.Phi(), TauTau_p4.M());
-    
-    //TLorentzVector TL = tau_1_TL +tau_2_TL;
-
-    TVector3 tautau_v = tautau_TL.Vect();
-    TVector3 tautauboost = -(tautau_TL.BoostVector());
-    tau_1_TL.Boost(tautauboost);
-    TVector3 tau_1_v = tau_1_TL.Vect();
-
-    float cosh_angle = cos(tau_1_v.Angle(tautau_v));
-
-    if ( !std::isnan(cosh_angle) && !std::isinf(cosh_angle) ) {
-        return cosh_angle;
-    } else {
-        return -10.0f;
+        return df1;
     }
-    };
-    return df.Define(outputname, calculate_costhstar, {tau_1, TauTau_p4});
-}
-ROOT::RDF::RNode calculate_kT(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &tau_2) {
-    auto calculate_kT = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &tau_2) {
-        if (tau_1.pt() < 0.0 || tau_2.pt() < 0.0)
-            return default_float;          
-    float pt_1 = tau_1.pt();
-    float pt_2 = tau_2.pt();
-    float result =std::min(pt_1, pt_2) * ROOT::Math::VectorUtil::DeltaR(tau_1, tau_2);
 
-    if ( !std::isnan(result) && !std::isinf(result) ) {
-        return result;
-    } else {
-        return -10.0f;
+    void DecomposeMomentum(
+        const ROOT::Math::PtEtaPhiMVector& p, 
+        const ROOT::Math::PtEtaPhiMVector& a, 
+        const ROOT::Math::PtEtaPhiMVector& b,
+        ROOT::Math::PtEtaPhiMVector& pa,
+        ROOT::Math::PtEtaPhiMVector& pb
+    ) {
+        //
+        typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double>> CartesianVector;
+
+        //
+        CartesianVector p_xyz(p.Px(), p.Py(), p.Pz(), p.E());
+        CartesianVector a_xyz(a.Px(), a.Py(), a.Pz(), a.E());
+        CartesianVector b_xyz(b.Px(), b.Py(), b.Pz(), b.E());
+
+        //
+        double a_magnitude = a_xyz.R();
+        double b_magnitude = b_xyz.R();
+
+        // 
+        CartesianVector a_unit = a_xyz / a_magnitude;
+        CartesianVector b_unit = b_xyz / b_magnitude;
+
+        //
+        double p_dot_a = p_xyz.Dot(a_unit);
+        double p_dot_b = p_xyz.Dot(b_unit);
+
+        CartesianVector p_a = p_dot_a * a_unit;
+        CartesianVector p_b = p_dot_b * b_unit;
+
+        //
+        pa = ROOT::Math::PtEtaPhiMVector(p_a.Pt(), p_a.Eta(), p_a.Phi(), p_a.M());
+        pb = ROOT::Math::PtEtaPhiMVector(p_b.Pt(), p_b.Eta(), p_b.Phi(), p_b.M());
     }
-    };
-    return df.Define(outputname, calculate_kT, {tau_1, tau_2});
-}
 
+    ROOT::RDF::RNode Mass_CA(
+        ROOT::RDF::RNode df,
+        const std::string &p0_fatjet,
+        const std::string &p1_fatjet,
+        const std::string &met_pt,
+        const std::string &met_phi,
+        const std::string &mass_caca
+    ) 
+    {
+        auto df1 = df.Define(
+            mass_caca,
+            [](
+                const ROOT::Math::PtEtaPhiMVector &p0,
+                const ROOT::Math::PtEtaPhiMVector &p1,
+                const float &pt_met,
+                const float &phi_met) {
 
-ROOT::RDF::RNode calculate_antikT(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &tau_2) {
-    auto calculate_antikT = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &tau_2) {
-        if (tau_1.pt() < 0.0 || tau_2.pt() < 0.0)
-            return default_float;          
-    float pt_1 = tau_1.pt();
-    float pt_2 = tau_2.pt();
-    float result =std::min(1/pt_1, 1/pt_2) * ROOT::Math::VectorUtil::DeltaR(tau_1, tau_2);
+                    ROOT::Math::PtEtaPhiMVector p_MET(pt_met, 0, phi_met, pt_met);
+                    ROOT::Math::PtEtaPhiMVector p_Nu0, p_Nu1;
+                    DecomposeMomentum(p_MET, p0, p1, p_Nu0, p_Nu1);
 
-    if ( !std::isnan(result) && !std::isinf(result) ) {
-        return result;
-    } else {
-        return -10.0f;
+                    float Nu0Tau_pt = p_Nu0.Pt();
+                    float Nu1Tau_pt = p_Nu1.Pt();
+
+                    float x0_METtoNu_tau = p0.Pt() / (p0.Pt() + Nu0Tau_pt);
+                    float x1_METtoNu_tau = p1.Pt() / (p1.Pt() + Nu1Tau_pt);
+
+                    float x0x1 = x0_METtoNu_tau * x1_METtoNu_tau;
+
+                    return x0x1;
+                    },
+                    {p0_fatjet, p1_fatjet, met_pt, met_phi}
+        );
+        return df1;
     }
-    };
-    return df.Define(outputname, calculate_antikT, {tau_1, tau_2});
+
+    ROOT::RDF::RNode CA_ttMAss(
+        ROOT::RDF::RNode df,
+        const std::string &x0x1,
+        const std::string &FatJet_mass,
+        const std::string &result
+    ) 
+    {
+        auto df1 = df.Define(
+            result,
+            [](
+                const float &xx,
+                const float &mass) {
+                    float Mass = mass/std::sqrt(xx);
+                    return Mass;
+                    },
+                    {x0x1, FatJet_mass}
+        );
+        return df1;
+    }
+
+    ROOT::RDF::RNode CA_ttMAss_fatjet(
+        ROOT::RDF::RNode df,
+        const std::string &p0_fatjet,
+        const std::string &met_pt,
+        const std::string &met_phi,
+        const std::string &result
+    ) 
+    {
+        auto df1 = df.Define(
+            result,
+            [](
+                const ROOT::Math::PtEtaPhiMVector &p0,
+                const float &pt_met,
+                const float &phi_met) {
+                    ROOT::Math::PtEtaPhiMVector p_MET(pt_met, 0, phi_met, pt_met);
+                    ROOT::Math::PtEtaPhiMVector p_Nu0, p_Nu1;
+                    DecomposeMomentum(p_MET, p0, p0, p_Nu0, p_Nu1);
+                    float mm = (p0+p_Nu0).M();
+                    return mm;
+                    },
+                    {p0_fatjet, met_pt, met_phi}
+        );
+        return df1;
+    }
+
+    ROOT::RDF::RNode Score_9X(
+        ROOT::RDF::RNode df,
+        const std::string &Score,
+        const std::string &result
+    ) 
+    {
+        auto df1 = df.Define(
+            result,
+            [](const float &score) 
+            {
+                    float mm = -std::log10(1 - score + 1e-18);
+                    return mm;
+                    },
+                    {Score}
+        );
+        return df1;
+    }
+
+    ROOT::RDF::RNode Score_original(
+        ROOT::RDF::RNode df,
+        const std::string &Score,
+        const std::string &QCD,
+        const std::string &result
+    ) 
+    {
+        auto df1 = df.Define(
+            result,
+            [](
+                const float &score,
+                const float &qcd) 
+            {
+                    float mm = qcd * score / (1-score);
+                    return mm;
+                    },
+                    {Score, QCD}
+        );
+        return df1;
+    }
+
 }
-
-
-
-ROOT::RDF::RNode calculate_dphi(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &phi_1, const std::string &phi_2) {
-    auto calculate_dphi = [](float phi_1, float phi_2) {
-        float result =abs(TVector2::Phi_mpi_pi(phi_1 - phi_2));
-        if ( !std::isnan(result) && !std::isinf(result) ) {
-                return result;
-            } else {
-                return -10.0f;
-            }
-        };
-    return df.Define(outputname, calculate_dphi, {phi_1, phi_2});
-}
-
-ROOT::RDF::RNode calculate_subtract(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &a, const std::string &b) {
-    // subtract two variables                            
-    auto calculate_subtract = [](float a, float b) {
-        float result =a - b;
-        if ( !std::isnan(result) && !std::isinf(result) ) {
-                return result;
-            } else {
-                return -10.0f;
-            }
-        };
-    return df.Define(outputname, calculate_subtract, {a, b});
-}
-
-
-
-// calculate ratio of A/B
-ROOT::RDF::RNode calculate_ratio(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &A, const std::string &B) {
-    auto calculate_ratio = [](float A, float B) {
-        if( B==0 ){
-            return -10.0f;
-        }else{
-            return A/B;
-        }
-    };
-    return df.Define(outputname, calculate_ratio, {A,B});
-}
-
-// add pt_1_LT by Leyan 2024/12/18
-
-ROOT::RDF::RNode calculate_boost_pt(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &TauTau_p4) {
-    auto calculate_boost_pt = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &TauTau_p4) {
-        if (tau_1.pt() < 0.0 || TauTau_p4.pt() < 0.0)
-            return default_float;          
-        TLorentzVector tau_1_TL;
-        TLorentzVector tautau_TL;
-        tau_1_TL.SetPtEtaPhiM(tau_1.Pt(), tau_1.Eta(), tau_1.Phi(), tau_1.M());
-        tautau_TL.SetPtEtaPhiM(TauTau_p4.Pt(), TauTau_p4.Eta(), TauTau_p4.Phi(), TauTau_p4.M());
-        
-
-        TVector3 tautau_v = tautau_TL.Vect();
-        TVector3 tautauboost = -(tautau_TL.BoostVector());
-        tau_1_TL.Boost(tautauboost);
-        TVector3 tau_1_v = tau_1_TL.Vect();
-
-        float result =tau_1_TL.Pt() ;
-
-        if ( !std::isnan(result) && !std::isinf(result) ) {
-            return result;
-        } else {
-            return -10.0f;
-        }
-    };
-    return df.Define(outputname, calculate_boost_pt, {tau_1, TauTau_p4});
-}
-
-
-ROOT::RDF::RNode calculate_boost_eta(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &TauTau_p4) {
-    auto calculate_boost_eta = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &TauTau_p4) {
-        if (tau_1.pt() < 0.0 || TauTau_p4.pt() < 0.0)
-            return default_float;          
-        TLorentzVector tau_1_TL;
-        TLorentzVector tautau_TL;
-        tau_1_TL.SetPtEtaPhiM(tau_1.Pt(), tau_1.Eta(), tau_1.Phi(), tau_1.M());
-        tautau_TL.SetPtEtaPhiM(TauTau_p4.Pt(), TauTau_p4.Eta(), TauTau_p4.Phi(), TauTau_p4.M());
-        
-
-        TVector3 tautau_v = tautau_TL.Vect();
-        TVector3 tautauboost = -(tautau_TL.BoostVector());
-        tau_1_TL.Boost(tautauboost);
-        TVector3 tau_1_v = tau_1_TL.Vect();
-
-        float result =tau_1_TL.Eta() ;
-
-        if ( !std::isnan(result) && !std::isinf(result) ) {
-            return result;
-        } else {
-            return -10.0f;
-        }
-    };
-    return df.Define(outputname, calculate_boost_eta, {tau_1, TauTau_p4});
-}
-
-
-ROOT::RDF::RNode calculate_boost_phi(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &TauTau_p4) {
-    auto calculate_boost_phi = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &TauTau_p4) {
-        if (tau_1.pt() < 0.0 || TauTau_p4.pt() < 0.0)
-            return default_float;          
-        TLorentzVector tau_1_TL;
-        TLorentzVector tautau_TL;
-        tau_1_TL.SetPtEtaPhiM(tau_1.Pt(), tau_1.Eta(), tau_1.Phi(), tau_1.M());
-        tautau_TL.SetPtEtaPhiM(TauTau_p4.Pt(), TauTau_p4.Eta(), TauTau_p4.Phi(), TauTau_p4.M());
-        
-
-        TVector3 tautau_v = tautau_TL.Vect();
-        TVector3 tautauboost = -(tautau_TL.BoostVector());
-        tau_1_TL.Boost(tautauboost);
-        TVector3 tau_1_v = tau_1_TL.Vect();
-
-        float result =tau_1_TL.Phi() ;
-
-        if ( !std::isnan(result) && !std::isinf(result) ) {
-            return result;
-        } else {
-            return -10.0f;
-        }
-    };
-    return df.Define(outputname, calculate_boost_phi, {tau_1, TauTau_p4});
-}
-
-// add m_vis_square by Leyan 2024/12/18
-ROOT::RDF::RNode calculate_m_vis_square(ROOT::RDF::RNode df, const std::string &outputname,
-                        const std::string &tau_1, const std::string &tau_2) {
-    auto calculate_m_vis_square = [](ROOT::Math::PtEtaPhiMVector &tau_1,
-                               ROOT::Math::PtEtaPhiMVector &tau_2) {
-        if (tau_1.pt() < 0.0 || tau_2.pt() < 0.0)
-            return default_float;          
-        float result =((tau_1 + tau_2).M2());
-
-        if ( !std::isnan(result) && !std::isinf(result) ) {
-            return result;
-        } else {
-            return -10.0f;
-        }
-        
-    };
-    return df.Define(outputname, calculate_m_vis_square, {tau_1, tau_2});
-}
-
-ROOT::RDF::RNode buildLorentzVector(ROOT::RDF::RNode df, const std::string &outputname,
-        const std::string &pt, const std::string &eta, const std::string &phi, const std::string &mass) {
-        auto buildLorentzVector = [](float &pt, float &eta, float &phi, float &mass) {
-        if (pt < 0.0 || mass < 0.0)
-            return default_lorentzvector;          
-        ROOT::Math::PtEtaPhiMVector tau_1;
-        tau_1 = ROOT::Math::PtEtaPhiMVector(pt, eta, phi, mass);
-        return tau_1;
-    };
-    return df.Define(outputname, buildLorentzVector, {pt, eta, phi, mass});
-}
-
-
-
-
-
 
 } // end namespace quantities
 #endif /* GUARD_QUANTITIES_H */

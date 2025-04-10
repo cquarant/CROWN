@@ -11,6 +11,39 @@
 
 namespace lorentzvectors {
 
+
+ROOT::RDF::RNode buildSFMass(
+    ROOT::RDF::RNode df, 
+    const std::vector<std::string> &obj_quantities,
+    const int pairindex, 
+    const std::string &obj_sfmass_name
+    ){
+        auto df1 = df.Define(
+            obj_sfmass_name,
+            [pairindex](
+                const ROOT::RVec<int> &pair,
+                const ROOT::RVec<float> &masses
+            ){
+                const int index = pair.at(pairindex);
+                return masses.at(index);
+            }, obj_quantities
+        );
+        return df1;
+    }
+
+ROOT::RDF::RNode buildSafe999(ROOT::RDF::RNode df, const std::string &outputname) {
+    auto df1 = df.Define(
+        outputname,
+        []() {
+            constexpr float safe_value = -999.0;
+            Logger::get("lorentzvectors")->debug("Returning safe default mass: {}", safe_value);
+            return safe_value;
+        }
+    );
+    return df1;
+}
+    
+
 /// Function to build the lorentzvector from the pt, eta, phi and mass of a
 /// particle. This utilizes the [PtEtaPhiMVector from
 /// ROOT](https://root.cern/doc/master/namespaceROOT_1_1Math.html#a6cea5921731c7ac99dea921fb188df31)
@@ -66,6 +99,59 @@ ROOT::RDF::RNode buildparticle(ROOT::RDF::RNode df,
             return p4;
         },
         quantities);
+    return df1;
+}
+
+ROOT::RDF::RNode build_input_index(ROOT::RDF::RNode df,
+                               const std::string &index, const std::string &pt,
+                               const std::string &eta , const std::string &phi , const std::string &mass ,
+                               const std::string &outputname) {
+    auto df1 = df.Define(
+        outputname,
+        [index, outputname](
+            const ROOT::RVec<float> &pts,
+            const ROOT::RVec<float> &etas, 
+            const ROOT::RVec<float> &phis,
+            const ROOT::RVec<float> &masses) {
+            // the index of the particle is stored in the pair vector
+            ROOT::Math::PtEtaPhiMVector p4;
+            Logger::get("lorentzvectors")
+                ->debug("starting to build 4vector {}!", outputname);
+            try {
+                const short index = index;
+                Logger::get("lorentzvectors")->debug("pts {}", pts);
+                Logger::get("lorentzvectors")->debug("etas {}", etas);
+                Logger::get("lorentzvectors")->debug("phis {}", phis);
+                Logger::get("lorentzvectors")->debug("masses {}", masses);
+                Logger::get("lorentzvectors")->debug("Index {}", index);
+
+                p4 = ROOT::Math::PtEtaPhiMVector(pts.at(index), etas.at(index),
+                                                 phis.at(index),
+                                                 masses.at(index));
+            } catch (const std::out_of_range &e) {
+                p4 = ROOT::Math::PtEtaPhiMVector(default_float, default_float,
+                                                 default_float, default_float);
+                Logger::get("lorentzvectors")
+                    ->debug("Index not found, retuning dummy vector !");
+            }
+            Logger::get("lorentzvectors")
+                ->debug("P4 - Particle {} : {}", index, p4);
+            return p4;
+        },
+        {pt, eta, phi, mass});
+    return df1;
+}
+
+ROOT::RDF::RNode buildSafeP4(ROOT::RDF::RNode df, const std::string &outputname) {
+    auto df1 = df.Define(
+        outputname,
+        []() {
+            constexpr float safe_value = 999.0;
+            ROOT::Math::PtEtaPhiMVector p4(safe_value, safe_value, safe_value, safe_value);
+            Logger::get("lorentzvectors")->debug("Returning safe default 4-vector: {}", p4);
+            return p4;
+        }
+    );
     return df1;
 }
 

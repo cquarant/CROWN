@@ -2,6 +2,233 @@
 #define GUARD_PHYSICSOBJECTS_H
 
 namespace physicsobject {
+///mingxuan add
+ROOT::RDF::RNode calc_4l_cosThStar_hzz(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &v_p4_, const std::string &h_p4_, const std::string &mu_p4_);
+ROOT::RDF::RNode calc_4l_cosTh1_hzz(ROOT::RDF::RNode df, const std::string &outputname,
+                        const std::string &v_p4_, const std::string &h_p4_);
+ROOT::RDF::RNode calc_4l_cosphi_hzz(ROOT::RDF::RNode df, const std::string &outputname,
+                                    const std::string &lep_v4_, const std::string &v_p4_, const std::string &h_p4_);
+ROOT::RDF::RNode calc_4l_cosphi1_hzz(ROOT::RDF::RNode df, const std::string &outputname,
+                                     const std::string &mu_p4_, const std::string &h_p4_, const std::string &v_p4_);
+/// write by botao
+ROOT::RDF::RNode build_Wp4(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &lep_p4, const std::string &nu_p4);
+ROOT::RDF::RNode build_nup4(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &met_p4, const std::string &pz_nu);
+ROOT::RDF::RNode Muon_var(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_vars,
+                                 const std::string &dimuons_index,
+                                 const int ranking);
+ROOT::RDF::RNode pt_W(ROOT::RDF::RNode df, const std::string &outputname,
+                    const std::string &particle_p4, const std::string &met);
+ROOT::RDF::RNode phi_W(ROOT::RDF::RNode df, const std::string &outputname,
+                    const std::string &particle_p4, const std::string &met);                    
+ROOT::RDF::RNode PassJetVetoFlag(ROOT::RDF::RNode df, const std::string &jet_pts, const std::string &outputname);
+ROOT::RDF::RNode flagNumObject(ROOT::RDF::RNode df, const std::string &flagname,
+                               const std::string &object_number,
+                               const int flag_threshold, const std::string relation);
+ROOT::RDF::RNode M_dileptonMass(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &particle_charges,
+                                 const std::string &goodmuons_index);
+ROOT::RDF::RNode ECalGapVeto(ROOT::RDF::RNode df, const std::string &etaColumnName,
+                              const std::string &maskname,
+                              const float &etaBoundary,
+                              const float &lowerThresholdBarrel,
+                              const float &upperThresholdBarrel,
+                              const float &lowerThresholdEndcap);
+ROOT::RDF::RNode DiMuonFromHiggs(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &dimuons_index);
+ROOT::RDF::RNode HiggsToDiMuonPairCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &dimuons_index);
+ROOT::RDF::RNode DiMuonFromZVeto(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &particle_charges,
+                                 const std::string &goodmuons_index);
+ROOT::RDF::RNode LeptonChargeSum(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_charge,
+                                 const std::string &goodmuons_index);
+ROOT::RDF::RNode LeptonChargeSumEleMu(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_charge,
+                                 const std::string &ele_charge,
+                                 const std::string &goodmuons_index,
+                                 const std::string &base_electrons_index);
+ROOT::RDF::RNode Ele_Veto(ROOT::RDF::RNode df, 
+                    const std::string& output_name, 
+                    const std::string& base_ele_mask);
+ROOT::RDF::RNode HiggsCandDiMuonPairCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &particle_charges,
+                                 const std::string &goodmuons_index);
+ROOT::RDF::RNode ZCandDiElectronPairCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &particle_charges,
+                                 const std::string &base_electrons_index);
+ROOT::RDF::RNode DiEleFromZ(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &dielectrons_index);
+ROOT::RDF::RNode ZToDiElectronPairCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &dielectrons_index);
+ROOT::RDF::RNode HiggsAndZFourMuonsCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &particle_charges,
+                                 const std::string &goodmuons_index);
+ROOT::RDF::RNode QuadMuonFromZZVeto(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &quadmuons_index);
+ROOT::RDF::RNode ZToSecondMuonPairCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &fourmuons_index);
+ROOT::RDF::RNode ExtraMuonIndexFromW(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &goodmuons_index,
+                                 const std::string &dimuons_index);
+ROOT::RDF::RNode ExtraMuonFromW(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &extra_muon_index);
+ROOT::RDF::RNode muSSorOSwithLeptonW_p4(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_pts,
+                                 const std::string &muon_etas,
+                                 const std::string &muon_phis,
+                                 const std::string &muon_masses,
+                                 const std::string &muon_charges,
+                                 const std::string &lep_charges,
+                                 const std::string &dimuons_index,
+                                 const std::string &lep_index,
+                                 const int SameSign);
+ROOT::RDF::RNode MHT_Calculation(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &goodjets_index);
+ROOT::RDF::RNode MHT_CalculationALL(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_pts,
+                                 const std::string &muon_etas,
+                                 const std::string &muon_phis,
+                                 const std::string &muon_masses,
+                                 const std::string &muon_index,
+                                 const std::string &ele_pts,
+                                 const std::string &ele_etas,
+                                 const std::string &ele_phis,
+                                 const std::string &ele_masses,
+                                 const std::string &ele_index,
+                                 const std::string &jet_pts,
+                                 const std::string &jet_etas,
+                                 const std::string &jet_phis,
+                                 const std::string &jet_masses,
+                                 const std::string &goodjets_index);
+ROOT::RDF::RNode PassFlag(ROOT::RDF::RNode df, const std::string &outputname);
+ROOT::RDF::RNode PassDiEleIn4m(ROOT::RDF::RNode df, const std::string &outputname);
+ROOT::RDF::RNode Calc_CosThetaStar(ROOT::RDF::RNode df, const std::string &outputname,
+                    const std::string &lepton_p4, const std::string &mu_p4);
+ROOT::RDF::RNode Calc_CosThetaStar_ZH(ROOT::RDF::RNode df, const std::string &outputname,
+                    const std::string &Z_p4, const std::string &H_p4);
+ROOT::RDF::RNode RedirectZlepID(ROOT::RDF::RNode df, const int ifMu, const std::string &outputname);
+ROOT::RDF::RNode MetCut(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &met_p4, const float pt_threshold);
+ROOT::RDF::RNode MaxMetCut(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &met_p4, const float pt_threshold);
+ROOT::RDF::RNode HiggsCandDiMuonGenPairCollection(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &Muon_indexToGen,
+                                 const std::string &dimuon_index);
+ROOT::RDF::RNode BosonDecayMode(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &GenPart_pdgId,
+                                 const std::string &GenPart_motherid,
+                                 const std::string &GenPart_statusFlags);
+ROOT::RDF::RNode BosonDecayMode_run2(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &GenPart_pdgId,
+                                 const std::string &GenPart_motherid,
+                                 const std::string &GenPart_statusFlags);
+ROOT::RDF::RNode DY_DiMuonPair_CR(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &particle_charges,
+                                 const std::string &goodmuons_index);
+ROOT::RDF::RNode DiMuonFromCR(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &dimuons_index);
+ROOT::RDF::RNode ZControlDiMuonPairP4(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &particle_pts,
+                                 const std::string &particle_etas,
+                                 const std::string &particle_phis,
+                                 const std::string &particle_masses,
+                                 const std::string &dimuons_index);
+ROOT::RDF::RNode TOP_EleMuPair_CR(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_pts,
+                                 const std::string &muon_etas,
+                                 const std::string &muon_phis,
+                                 const std::string &muon_masses,
+                                 const std::string &muon_charges,
+                                 const std::string &goodmuons_index,
+                                 const std::string &ele_pts,
+                                 const std::string &ele_etas,
+                                 const std::string &ele_phis,
+                                 const std::string &ele_masses,
+                                 const std::string &ele_charges,
+                                 const std::string &baseeles_index);
+ROOT::RDF::RNode EleMuFromCR(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &elemu_index);
+ROOT::RDF::RNode TopControlEleMuPairP4(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &muon_pts,
+                                 const std::string &muon_etas,
+                                 const std::string &muon_phis,
+                                 const std::string &muon_masses,
+                                 const std::string &ele_pts,
+                                 const std::string &ele_etas,
+                                 const std::string &ele_phis,
+                                 const std::string &ele_masses,
+                                 const std::string &elemu_index);
+ROOT::RDF::RNode LeadingFatJetSoftDropMass(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &fatjet_softdrop_mass, 
+                                 const std::string &good_fatjets_index);
+ROOT::RDF::RNode LeadingFatJetVar(ROOT::RDF::RNode df, const std::string &outputname,
+                                 const std::string &fatjet_deepTag, 
+                                 const std::string &good_fatjets_index);
+// ROOT::RDF::RNode HiggsToMuMu_Cand(ROOT::RDF::RNode df, const std::string &maskname,
+//                         const std::string &dimuon_p4);
+// ROOT::RDF::RNode GetFirstElement(ROOT::RDF::RNode df,
+//                                  const std::vector<ROOT::Math::PtEtaPhiMVector> &input_p4_vec,
+//                                  const std::string &outputname);
+///
+ROOT::RDF::RNode CutVarMin(ROOT::RDF::RNode df, const std::string &quantity,
+                       const std::string &maskname, const float &threshold);
+ROOT::RDF::RNode CutVarMax(ROOT::RDF::RNode df, const std::string &quantity,
+                       const std::string &maskname, const float &threshold);
+ROOT::RDF::RNode CutVarMaxUChar(ROOT::RDF::RNode df, const std::string &quantity,
+                       const std::string &maskname, const unsigned char &threshold);
 ROOT::RDF::RNode CutPt(ROOT::RDF::RNode df, const std::string &quantity,
                        const std::string &maskname, const float &ptThreshold);
 ROOT::RDF::RNode CutEta(ROOT::RDF::RNode df, const std::string &quantity,
@@ -112,17 +339,15 @@ applyRoccoRMC(ROOT::RDF::RNode df, const std::string &outputname,
 namespace tau {
 ROOT::RDF::RNode CutDecayModes(ROOT::RDF::RNode df, const std::string &maskname,
                                const std::string &tau_dms,
-                               const std::vector<UChar_t> &SelectedDecayModes);
-ROOT::RDF::RNode CutTauUChar_tID(ROOT::RDF::RNode df, const std::string &maskname,
-                         const std::string &nameID, const UChar_t &IDvalue) ;
+                               const std::vector<int> &SelectedDecayModes);
 ROOT::RDF::RNode CutTauID(ROOT::RDF::RNode df, const std::string &maskname,
-                          const std::string &nameID, const int &IDvalue);
+                          const std::string &nameID, const int &idxID);
 ROOT::RDF::RNode
 PtCorrection_eleFake(ROOT::RDF::RNode df, const std::string &corrected_pt,
                      const std::string &pt, const std::string &eta,
                      const std::string &decayMode, const std::string &genMatch,
                      const std::string &sf_file, const std::string &jsonESname,
-                     const std::string &idAlgorithm, const std::string &tau_ES_wp, const std::string &tau_ES_wp_VSe, 
+                     const std::string &idAlgorithm,
                      const std::string &sf_dm0_b, const std::string &sf_dm1_b,
                      const std::string &sf_dm0_e, const std::string &sf_dm1_e);
 ROOT::RDF::RNode
@@ -130,8 +355,7 @@ PtCorrection_muFake(ROOT::RDF::RNode df, const std::string &corrected_pt,
                     const std::string &pt, const std::string &eta,
                     const std::string &decayMode, const std::string &genMatch,
                     const std::string &sf_file, const std::string &jsonESname,
-                    const std::string &idAlgorithm, const std::string &tau_ES_wp, const std::string &tau_ES_wp_VSe, 
-                    const std::string &sf_es);
+                    const std::string &idAlgorithm, const std::string &sf_es);
 ROOT::RDF::RNode
 PtCorrection_byValue(ROOT::RDF::RNode df, const std::string &corrected_pt,
                      const std::string &pt, const std::string &decayMode,
@@ -142,8 +366,8 @@ PtCorrection_genTau(ROOT::RDF::RNode df, const std::string &corrected_pt,
                     const std::string &pt, const std::string &eta,
                     const std::string &decayMode, const std::string &genMatch,
                     const std::string &sf_file, const std::string &jsonESname,
-                    const std::string &idAlgorithm, const std::string &tau_ES_wp, const std::string &tau_ES_wp_VSe, 
-                    const std::string &DM0, const std::string &DM1, const std::string &DM10,
+                    const std::string &idAlgorithm, const std::string &DM0,
+                    const std::string &DM1, const std::string &DM10,
                     const std::string &DM11);
 } // namespace tau
 
@@ -156,10 +380,12 @@ PtCorrection_byValue(ROOT::RDF::RNode df, const std::string &corrected_pt,
 
 ROOT::RDF::RNode CutID(ROOT::RDF::RNode df, const std::string &maskname,
                        const std::string &nameID);
+ROOT::RDF::RNode CutUCharID(ROOT::RDF::RNode df, const std::string &maskname,
+                       const std::string &nameID, const unsigned char &idxID);
 ROOT::RDF::RNode CutCBID(ROOT::RDF::RNode df, const std::string &maskname,
-                         const std::string &nameID, const UChar_t &IDvalue);
+                         const std::string &nameID, const int &IDvalue);
 ROOT::RDF::RNode AntiCutCBID(ROOT::RDF::RNode df, const std::string &maskname,
-                             const std::string &nameID, const UChar_t &IDvalue);
+                             const std::string &nameID, const int &IDvalue);
 ROOT::RDF::RNode CutIsolation(ROOT::RDF::RNode df, const std::string &maskname,
                               const std::string &isolationName,
                               const float &Threshold);
