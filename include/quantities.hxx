@@ -206,6 +206,18 @@ namespace boostedbbtt {
         const std::string &Score,
         const std::string &QCD,
         const std::string &result); 
+    
+    ROOT::RDF::RNode dR_fatjet(
+        ROOT::RDF::RNode df, 
+        const std::string &dR_fatjet,
+        const std::string &p0_fatjet, 
+        const std::string &p1_fatjet);
+
+    ROOT::RDF::RNode dphi_fatjet(
+        ROOT::RDF::RNode df, 
+        const std::string &dphi_fatjet,
+        const std::string &p0_fatjet, 
+        const std::string &p1_fatjet);
          
 } // end namespace boostedbbtt
 } // end namespace quantities

@@ -1353,6 +1353,50 @@ namespace boostedbbtt{
         return df1;
     }
 
+    ROOT::RDF::RNode dR_fatjet(
+        ROOT::RDF::RNode df, 
+        const std::string &dR_fatjet,
+        const std::string &p0_fatjet, 
+        const std::string &p1_fatjet
+    ) {
+        auto df1 = df.Define(
+            dR_fatjet,
+            [](
+                const ROOT::Math::PtEtaPhiMVector &p0,
+                const ROOT::Math::PtEtaPhiMVector &p1
+            ) {
+
+                float deltaR_value = (float)ROOT::Math::VectorUtil::DeltaR(p0, p1);
+                    
+                return deltaR_value;
+                },
+                {p0_fatjet ,p1_fatjet}
+        );
+
+        return df1;
+    }
+
+    ROOT::RDF::RNode dphi_fatjet(
+        ROOT::RDF::RNode df, 
+        const std::string &dphi_fatjet,
+        const std::string &p0_fatjet, 
+        const std::string &p1_fatjet
+    ) {
+        auto df1 = df.Define(
+            dphi_fatjet,
+            [](
+                const ROOT::Math::PtEtaPhiMVector &p0,
+                const ROOT::Math::PtEtaPhiMVector &p1
+            ) {
+                float value = abs(p0.Phi()-p1.Phi());
+                    
+                return value;
+                },
+                {p0_fatjet ,p1_fatjet}
+        );
+
+        return df1;
+    }
 }
 
 } // end namespace quantities

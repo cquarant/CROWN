@@ -16,7 +16,22 @@ ROOT::RDF::RNode buildSFMass(
     const std::string &obj_sfmass_name
     );
 
+ROOT::RDF::RNode build_subjet_postion(
+    ROOT::RDF::RNode df, 
+    const std::vector<std::string> &obj_quantities,
+    const int pairindex, 
+    const std::string &obj_sfmass_name
+    );
+
+ROOT::RDF::RNode matchSubJet(
+    ROOT::RDF::RNode df, 
+    const std::vector<std::string> &obj_quantities,
+    const int pairindex0, const int pairindex1, 
+    const std::string &obj_sfmass_name
+    );
+
 ROOT::RDF::RNode buildSafe999(ROOT::RDF::RNode df, const std::string &outputname);
+ROOT::RDF::RNode buildSafem1(ROOT::RDF::RNode df, const std::string &outputname);
 
 ROOT::RDF::RNode buildparticle(ROOT::RDF::RNode df,
                                const std::vector<std::string> &quantities,

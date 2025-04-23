@@ -31,12 +31,73 @@ ROOT::RDF::RNode buildSFMass(
         return df1;
     }
 
+ROOT::RDF::RNode build_subjet_postion(
+    ROOT::RDF::RNode df, 
+    const std::vector<std::string> &obj_quantities,
+    const int pairindex, 
+    const std::string &obj_sfmass_name
+    ){
+        auto df1 = df.Define(
+            obj_sfmass_name,
+            [pairindex](
+                const ROOT::RVec<int> &pair,
+                const ROOT::RVec<short> &inn
+            ){
+                const int index = pair.at(pairindex);
+                return inn.at(index);
+            }, obj_quantities
+        );
+        return df1;
+    }
+
+ROOT::RDF::RNode matchSubJet(
+    ROOT::RDF::RNode df, 
+    const std::vector<std::string> &obj_quantities,
+    const int pairindex0, const int pairindex1, 
+    const std::string &obj_sfmass_name
+    ){
+        auto df1 =df.Define(
+            obj_sfmass_name,
+            [pairindex0, pairindex1](
+                const ROOT::RVec<int> &pair,
+                const short &index_from_Fatjet0,
+                const short &index_from_Fatjet1
+            ){
+                int matching = 0;
+
+                const int index0 = pair.at(pairindex0);
+                const int index1 = pair.at(pairindex1);
+                int index00 = index_from_Fatjet0;
+                int index11 = index_from_Fatjet1;
+                if (index0==index00 && index1==index11){
+                    matching = 1;
+                }
+                else if (index0==index11 && index1==index00){
+                    matching = 1;
+                }
+                return matching;
+            }, obj_quantities
+        );
+        return df1;
+    }
+
 ROOT::RDF::RNode buildSafe999(ROOT::RDF::RNode df, const std::string &outputname) {
     auto df1 = df.Define(
         outputname,
         []() {
             constexpr float safe_value = -999.0;
             Logger::get("lorentzvectors")->debug("Returning safe default mass: {}", safe_value);
+            return safe_value;
+        }
+    );
+    return df1;
+}
+
+ROOT::RDF::RNode buildSafem1(ROOT::RDF::RNode df, const std::string &outputname) {
+    auto df1 = df.Define(
+        outputname,
+        []() {
+            const int safe_value = -1;
             return safe_value;
         }
     );
