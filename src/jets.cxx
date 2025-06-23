@@ -17,7 +17,7 @@
 namespace jet {
 
 // vhmm extend to N particle overlap removal
-/// Function to veto jets overlapping with particle candidates
+/// Function to veto jets overlapping with muon particle candidates
 ///
 /// \param[in] df the input dataframe
 /// \param[out] output_col the name of the produced mask \param[in] jet_eta name
@@ -72,7 +72,7 @@ VetoOverlappingJets(ROOT::RDF::RNode df, const std::string &output_col,
 
 
 
-/// Function to veto jets overlapping with particle candidates
+/// Function to veto jets overlapping with two particle candidates
 ///
 /// \param[in] df the input dataframe
 /// \param[out] output_col the name of the produced mask \param[in] jet_eta name
@@ -123,13 +123,14 @@ VetoOverlappingJets(ROOT::RDF::RNode df, const std::string &output_col,
     return df1;
 }
 
-/// Function to veto jets overlapping with particle candidates
+/// Function to veto jets overlapping with one particle candidates
 ///
 /// \param[in] df the input dataframe
-/// \param[out] output_col the name of the produced mask \param[in] jet_eta name
-/// of the jet etas \param[in] jet_phi name of the jet phis \param[in] p4_1 four
-/// vector of the first particle candidate \param[in] deltaRmin minimum required
-/// distance in dR between jets and particle candidates
+/// \param[out] output_col the name of the produced mask 
+/// \param[in] jet_eta name of the jet etas 
+/// \param[in] jet_phi name of the jet phis 
+/// \param[in] p4_1 four vector of the first particle candidate 
+/// \param[in] deltaRmin minimum required distance in dR between jets and particle candidate
 ///
 /// \return a dataframe containing the new mask
 ROOT::RDF::RNode
@@ -316,6 +317,65 @@ ROOT::RDF::RNode OrderJetsByCustomCriteria(ROOT::RDF::RNode df,
     return df1;
 }
 
+//Claudio for ordering jets by any defined quantity
+/// Originally developed to order jets by Btag score for H->bb candidate selection
+/// This funcion adds a column to the df indexing Jets by one of their properties, e.g. jet_pt, 
+/// PNet Btag score, GloparT score, etc.
+ROOT::RDF::RNode IndexJetsByVariable(ROOT::RDF::RNode df,
+                                           const std::string &output_col,
+                                           const std::string &jet_var,
+                                           const std::string &jetmask_name) {
+    // auto df1 = df.Define(
+    //     output_col,
+    //     [output_col, jetmask_name](const ROOT::RVec<int> &jetmask,
+    //                                const ROOT::RVec<float> &jet_var) {
+    //             // select good jets (jetmask > 0)
+    //             ROOT::RVec<size_t> good_indices = ROOT::VecOps::Nonzero(jetmask);
+    //             // Create a pair vector (indice, valore) for good jets
+    //             std::vector<std::pair<int, float>> idx_val;
+    //             for (auto idx : good_indices) {
+    //                 idx_val.emplace_back(idx, jet_var[idx]);
+    //             }
+    //             // Order pairs by value in descending order
+    //             std::sort(idx_val.begin(), idx_val.end(),
+    //                     [](const auto &a, const auto &b) { return a.second > b.second; });
+    //             // Extract sorted indices
+    //             ROOT::RVec<int> sorted_indices(idx_val.size());
+    //             for (size_t i = 0; i < idx_val.size(); ++i) {
+    //                 sorted_indices[i] = idx_val[i].first;
+    //             }
+    //             return sorted_indices;
+    //     },
+    //     {jetmask_name, jet_var});
+
+    auto df1 = df.Define(
+        output_col,
+        [output_col, jetmask_name](const ROOT::RVec<int> &jetmask,
+                                   const ROOT::RVec<float> &jet_var) {
+            Logger::get("OrderJetsByPt")
+                ->debug("Ordering good jets from {} by {}, output stored in {}",
+                        jetmask_name, jet_var, output_col);
+            Logger::get("OrderJetsByPt")->debug("Jetpt before {}", jet_var);
+            Logger::get("OrderJetsByPt")->debug("Mask {}", jetmask);
+            auto good_jets_var =
+                ROOT::VecOps::Where(jetmask > 0, jet_var, (float)0.);
+            Logger::get("OrderJetsByPt")->debug("Jetpt after {}", good_jets_var);
+            // we have to convert the result into an RVec of ints since argsort
+            // gives back an unsigned long vector
+            auto temp = ROOT::VecOps::Intersect(
+                ROOT::VecOps::Argsort(good_jets_var,
+                                      [](double x, double y) { return x > y; }),
+                ROOT::VecOps::Nonzero(good_jets_var));
+            Logger::get("OrderJetsByPt")->debug("jet Indices {}", temp);
+            ROOT::RVec<int> result(temp.size());
+            std::transform(temp.begin(), temp.end(), result.begin(),
+                           [](unsigned long int x) { return (int)x; });
+            Logger::get("OrderJetsByPt")->debug("jet Indices int {}", result);
+            return result;
+        },
+        {jetmask_name, jet_var});
+    return df1;
+} // end IndexJetsByVariable
 
 } // end namespace jet
 
@@ -452,6 +512,8 @@ JetPtCorrection(ROOT::RDF::RNode df, const std::string &corrected_jet_pt,
                 const std::string &jes_tag, const std::string &jec_algo,
                 const std::string &jet_veto_map, const std::string &jet_veto_tag) {
     // identifying jet radius from algorithm
+    Logger::get("JetEnergyCorrection")
+        ->debug("JEC algorithm: {}", jec_algo);
     float jet_dR = 0.4;
     if (jec_algo.find("AK8") != std::string::npos) {
         jet_dR = 0.8;

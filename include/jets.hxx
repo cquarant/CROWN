@@ -32,6 +32,11 @@ ROOT::RDF::RNode OrderJetsByCustomCriteria(ROOT::RDF::RNode df,
                                            const std::string &jet_xtt,
                                            const std::string &jet_xbb,
                                            const std::string &jetmask_name);
+ROOT::RDF::RNode IndexJetsByVariable(ROOT::RDF::RNode df,
+                                           const std::string &output_col,
+                                           const std::string &jet_var,
+                                           const std::string &jetmask_name);
+
 } // end namespace jet
 
 namespace physicsobject {
